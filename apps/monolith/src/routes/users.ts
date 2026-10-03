@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../db.js";
+import { inMemoryDb } from "../in-memory-db.js";
 
 interface CreateUserBody {
   name: string;
@@ -21,8 +21,8 @@ export async function userRoutes(app: FastifyInstance) {
     }
 
     try {
-      const user = await prisma.user.create({
-        data: { name, email },
+      const user = await inMemoryDb.createUser({
+        name, email
       });
       return reply.code(201).send(user);
     } catch (err) {
@@ -31,13 +31,11 @@ export async function userRoutes(app: FastifyInstance) {
   });
 
   app.get("/users", async () => {
-    return prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+    return inMemoryDb.findUsers();
   });
 
   app.get<{ Params: { id: string } }>("/users/:id", async (request, reply) => {
-    const user = await prisma.user.findUnique({
-      where: { id: request.params.id },
-    });
+    const user = await inMemoryDb.findUserById(request.params.id);
     if (!user) {
       return reply.code(404).send({ error: "user with id not found" });
     }

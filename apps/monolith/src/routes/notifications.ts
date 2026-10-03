@@ -1,5 +1,5 @@
 import type {FastifyInstance} from "fastify";
-import {prisma} from "../db.js";
+import { inMemoryDb } from "../in-memory-db.js";
 
 /**
  * Registers notification-related HTTP routes on the Fastify instance.
@@ -11,10 +11,7 @@ export async function notificationRoutes(app: FastifyInstance) {
   app.get<{ Params: { userId: string } }>(
     "/notifications/:userId",
     async (request) => {
-      return prisma.notification.findMany({
-        where: { userId: request.params.userId },
-        orderBy: { createdAt: "desc" },
-      });
+      return inMemoryDb.findNotificationsByUserId(request.params.userId);
     }
   );
 
@@ -22,10 +19,7 @@ export async function notificationRoutes(app: FastifyInstance) {
     "/notifications/:id/read",
     async (request, reply) => {
       try {
-        return await prisma.notification.update({
-          where: { id: request.params.id },
-          data: { read: true },
-        });
+        return inMemoryDb.markNotificationAsRead(request.params.id);
       } catch {
         return reply.code(404).send({ error: "notification not found" });
       }
