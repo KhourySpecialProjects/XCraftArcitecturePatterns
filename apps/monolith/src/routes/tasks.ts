@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../db.js";
+import { inMemoryDb } from "../in-memory-db.js";
 
 interface CreateTaskBody {
   title: string;
@@ -26,24 +26,20 @@ export async function taskRoutes(app: FastifyInstance) {
     }
 
     if (assigneeId) {
-      const assignee = await prisma.user.findUnique({
-        where: { id: assigneeId },
-      });
+      const assignee = await inMemoryDb.findUserById(assigneeId);
       if (!assignee) {
         return reply.code(400).send({ error: "assigneeId does not exist" });
       }
     }
 
-    const task = await prisma.task.create({
-      data: { title, description, assigneeId },
+    const task = await inMemoryDb.createTask({
+      title, description, assigneeId
     });
 
     if (assigneeId) {
-      await prisma.notification.create({
-        data: {
-          userId: assigneeId,
-          message: `Task "${title}" was assigned to you`,
-        },
+      await inMemoryDb.createNotification({
+        userId: assigneeId,
+        message: `Task "${title}" was assigned to you`,
       });
     }
 
@@ -51,17 +47,11 @@ export async function taskRoutes(app: FastifyInstance) {
   });
 
   app.get("/tasks", async () => {
-    return prisma.task.findMany({
-      include: { assignee: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: "asc" },
-    });
+    return inMemoryDb.findTasks();
   });
 
   app.get<{ Params: { id: string } }>("/tasks/:id", async (request, reply) => {
-    const task = await prisma.task.findUnique({
-      where: { id: request.params.id },
-      include: { assignee: { select: { id: true, name: true, email: true } } },
-    });
+    const task = await inMemoryDb.findTaskById(request.params.id);
     if (!task) {
       return reply.code(404).send({ error: "task not found" });
     }
@@ -75,8 +65,8 @@ export async function taskRoutes(app: FastifyInstance) {
       const { assigneeId } = request.body;
 
       const [task, assignee] = await Promise.all([
-        prisma.task.findUnique({ where: { id } }),
-        prisma.user.findUnique({ where: { id: assigneeId } }),
+        inMemoryDb.findTaskById(id),
+        inMemoryDb.findUserById(assigneeId),
       ]);
 
       if (!task) {
@@ -86,16 +76,11 @@ export async function taskRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "assigneeId does not exist" });
       }
 
-      const updated = await prisma.task.update({
-        where: { id },
-        data: { assigneeId },
-      });
+      const updated = await inMemoryDb.updateTaskAssignee(id, assigneeId);
 
-      await prisma.notification.create({
-        data: {
-          userId: assigneeId,
-          message: `Task "${task.title}" was assigned to you`,
-        },
+      await inMemoryDb.createNotification({
+        userId: assigneeId,
+        message: `Task "${task.title}" was assigned to you`,
       });
 
       return updated;
