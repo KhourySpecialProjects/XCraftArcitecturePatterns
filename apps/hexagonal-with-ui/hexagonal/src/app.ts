@@ -3,9 +3,6 @@ import { registerNotificationRoutes } from "./adapters/driving/http/notification
 import { registerTaskRoutes } from "./adapters/driving/http/tasks.routes.js";
 import { registerUserRoutes } from "./adapters/driving/http/users.routes.js";
 import { InProcessEventBusAdapter } from "./adapters/driven/messaging/in-process-event-bus.adapter.js";
-import { PrismaNotificationRepository } from "./adapters/driven/persistence/prisma-notification.repository.js";
-import { PrismaTaskRepository } from "./adapters/driven/persistence/prisma-task.repository.js";
-import { PrismaUserRepository } from "./adapters/driven/persistence/prisma-user.repository.js";
 import { TaskAssignedEvent } from "./core/entities/events.js";
 import { EventPublisherPort } from "./core/ports/driven/event-publisher.port.js";
 import { NotificationRepositoryPort } from "./core/ports/driven/notification-repository.port.js";
@@ -17,7 +14,10 @@ import { UserUseCasePort } from "./core/ports/driving/user-use-case.port.js";
 import { NotificationService } from "./core/services/notification.service.js";
 import { TaskService } from "./core/services/task.service.js";
 import { UserService } from "./core/services/user.service.js";
-import { prisma } from "./db.js";
+import { InMemoryUserRepository } from "./adapters/driven/persistence/in-memory-user.repository.js";
+import { InMemoryTaskRepository } from "./adapters/driven/persistence/in-memory-task.repository.js";
+import { InMemoryNotificationRepository } from "./adapters/driven/persistence/in-memory-notification.repository.js";
+
 
 /**
  * Dependency injection container configuration interface used to build the Fastify application.
@@ -58,11 +58,11 @@ export function buildApp(dependencies: AppDependencies = {}): FastifyInstance {
 
   // 1. Driven Adapters (Persistence & Event Bus)
   const userRepository =
-    dependencies.userRepository ?? new PrismaUserRepository(prisma);
+    dependencies.userRepository ?? new InMemoryUserRepository();
   const taskRepository =
-    dependencies.taskRepository ?? new PrismaTaskRepository(prisma);
+    dependencies.taskRepository ?? new InMemoryTaskRepository(userRepository);
   const notificationRepository =
-    dependencies.notificationRepository ?? new PrismaNotificationRepository(prisma);
+    dependencies.notificationRepository ?? new InMemoryNotificationRepository();
   const eventPublisher =
     dependencies.eventPublisher ?? new InProcessEventBusAdapter();
 
