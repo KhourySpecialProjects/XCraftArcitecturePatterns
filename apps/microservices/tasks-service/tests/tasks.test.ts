@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import { cleanDb, closeDb } from "./helpers.js";
 import {publishEvent} from "@taskflow/shared";
-import { prisma } from "../src/db.js";
+import { taskStore } from "../src/in-memory-db.js";
 
 jest.mock("@taskflow/shared", () => ({
   connectMessaging: jest.fn(),
@@ -41,8 +41,11 @@ describe("Tasks Service", () => {
 
     it("creates a task with valid assignee", async () => {
       // Seed local user
-      await prisma.user.create({
-        data: { id: "user-1", name: "Ada", email: "ada@example.com", createdAt: new Date() }
+      await taskStore.upsertUser({
+        id: "user-1",
+        name: "Ada",
+        email: "ada@example.com",
+        createdAt: new Date(),
       });
 
       const response = await app.inject({
