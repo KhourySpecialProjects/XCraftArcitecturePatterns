@@ -1,11 +1,9 @@
-import { prisma, pool } from "../src/db.js";
+import { taskStore } from "../src/in-memory-db.js";
 
 export async function cleanDb() {
-  await prisma.task.deleteMany();
-  await prisma.user.deleteMany();
+  taskStore.clear();
 }
 
 export async function closeDb() {
-  await prisma.$disconnect();
-  await pool.end();
+  // No connection pool to close
 }
